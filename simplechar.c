@@ -99,6 +99,7 @@ static ssize_t dev_write(struct file*, const char __user *, size_t, loff_t*)
 
 static int __init dev_init(void)
 {
+    int err;
     maj_num = alloc_chrdev_region(&dev, 0, 1, DEV_NAME);
     if(maj_num < 0)
     {
@@ -107,23 +108,36 @@ static int __init dev_init(void)
     }
 
     cdev_init(char_dev_sample, &fops);
+    err = cdev_add(char_dev_sample, dev, 1);
+    if(err < 0){
+        printk("Failed to add char device !!!");
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
+    }
 
     cls = class_create(CLASS_NAME);
     if(IS_ERR(cls))
     {
         printk("Class create error\n");
+        cdev_del(char_dev_sample);
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
         return -1;
     }
     
     dev_create_res = device_create(cls, NULL, dev, NULL,  DEV_NAME);
     if(IS_ERR(dev_create_res))
     {
+        class_destroy(cls);
+        cdev_del(char_dev_sample);
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
         printk("Device create error \n");
         return -1;
     }
 
     atomic_set(&is_open, CDEV_NOT_USED);
-    return 1;
+    return 0;
 }
 
 static void __exit dev_deinit(void)
