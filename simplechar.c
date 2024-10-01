@@ -40,9 +40,8 @@ enum {
     CDEV_EXCLUSIVE_OPEN = 1
 };
 
-static char message[BUF_LEN];
-//static atomic_t is_open = ATOMIC_OPEN(CDEV_NOT_USED);
-static atomic_t is_open;
+//static char message[BUF_LEN];
+static atomic_t is_open = ATOMIC_INIT(0);
 
 static int dev_open(struct inode* ind, struct file* flp)
 {
@@ -70,7 +69,8 @@ static int dev_rel(struct inode* ind, struct file* flp)
 static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t* offset)
 {
     int bytes_read = 0;
-    const char* msg_ptr = message;
+    const char* msg_ptr = "string to read!!!!!";
+    
     if(!*(msg_ptr + *offset)){
         *offset = 0;
         return 0;
@@ -85,7 +85,7 @@ static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t
     }
 
     *offset += bytes_read;
-
+    printk("NUmber of bytes read %d !!!!!", bytes_read);
     return bytes_read;
 }
 
@@ -145,7 +145,7 @@ static int __init dev_init(void)
         return -1;
     }
 
-    atomic_set(&is_open, CDEV_NOT_USED);
+    //atomic_set(&is_open, CDEV_NOT_USED);
     printk("dev_init : finish inittialization!!!!");
     return 0;
 }
