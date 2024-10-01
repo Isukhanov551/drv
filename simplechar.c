@@ -18,7 +18,7 @@ struct class* cls;
 struct cdev* char_dev_sample;
 struct device* dev_create_res;
 
-static int maj_num;
+//static int maj_num;
 static int ctr = 0;
 
 static int dev_open(struct inode* ind, struct file* flp);
@@ -99,43 +99,68 @@ static ssize_t dev_write(struct file*, const char __user *, size_t, loff_t*)
 
 static int __init dev_init(void)
 {
-    maj_num = alloc_chrdev_region(&dev, 0, 1, DEV_NAME);
-    if(maj_num < 0)
+    int err;
+    printk("dev_init : start inittialization!!!!");
+    err = alloc_chrdev_region(&dev, 0, 1, DEV_NAME);
+    if(err < 0)
     {
         printk("Major number less than 0\n");
-        return maj_num;
+        return err;
+    }
+
+    char_dev_sample = kmalloc(sizeof(struct cdev), GFP_KERNEL);
+    if(!char_dev_sample){
+        printk("Failed to allocate dynamic memory !!!!!");
+        unregister_chrdev_region(dev, 1);
+        return -1;
     }
 
     cdev_init(char_dev_sample, &fops);
+    err = cdev_add(char_dev_sample, dev, 1);
+    if(err < 0){
+        printk("Failed to add char device !!!");
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
+        return err;
+    }
 
     cls = class_create(CLASS_NAME);
     if(IS_ERR(cls))
     {
         printk("Class create error\n");
+        cdev_del(char_dev_sample);
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
         return -1;
     }
     
     dev_create_res = device_create(cls, NULL, dev, NULL,  DEV_NAME);
     if(IS_ERR(dev_create_res))
     {
+        class_destroy(cls);
+        cdev_del(char_dev_sample);
+        kfree(char_dev_sample);
+        unregister_chrdev_region(dev, 1);
         printk("Device create error \n");
         return -1;
     }
 
     atomic_set(&is_open, CDEV_NOT_USED);
-    return 1;
+    printk("dev_init : finish inittialization!!!!");
+    return 0;
 }
 
 static void __exit dev_deinit(void)
 {
-    device_destroy(cls, MKDEV(maj_num, 0));
+    device_destroy(cls, dev);
     class_destroy(cls);
     cdev_del(char_dev_sample);
+    kfree(char_dev_sample);
     unregister_chrdev_region(dev, 1);
+    printk("dev deinit: Finish deinititalize !!!!!");
     return;
 }
 
 MODULE_LICENSE("GPL");
-
 module_init(dev_init);
 module_exit(dev_deinit);
