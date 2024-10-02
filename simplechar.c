@@ -54,7 +54,7 @@ static int dev_open(struct inode* ind, struct file* flp)
     }
     ctr++;
     printk("I TOLD YOU %d times gtfo", ctr);
-    return 1;
+    return 0;
 }
 
 static int dev_rel(struct inode* ind, struct file* flp)
@@ -63,7 +63,7 @@ static int dev_rel(struct inode* ind, struct file* flp)
     atomic_set(&is_open, CDEV_NOT_USED);
     
 
-    return 1;
+    return 0;
 }
 
 static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t* offset)
@@ -92,7 +92,7 @@ static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t
 static ssize_t dev_write(struct file*, const char __user *, size_t, loff_t*)
 {
     printk("Openration is not permitted!!!!");
-    return 1;
+    return 0;
 }
 
 
@@ -107,14 +107,14 @@ static int __init dev_init(void)
         printk("Major number less than 0\n");
         return err;
     }
-
+    printk("Alloc region sucsess");
     char_dev_sample = kmalloc(sizeof(struct cdev), GFP_KERNEL);
     if(!char_dev_sample){
         printk("Failed to allocate dynamic memory !!!!!");
         unregister_chrdev_region(dev, 1);
-        return -1;
+        return 0;
     }
-
+    printk("Kmalloc sucsess");
     cdev_init(char_dev_sample, &fops);
     err = cdev_add(char_dev_sample, dev, 1);
     if(err < 0){
@@ -124,6 +124,8 @@ static int __init dev_init(void)
         return err;
     }
 
+    printk("cdev add/init susess");
+
     cls = class_create(CLASS_NAME);
     if(IS_ERR(cls))
     {
@@ -131,9 +133,9 @@ static int __init dev_init(void)
         cdev_del(char_dev_sample);
         kfree(char_dev_sample);
         unregister_chrdev_region(dev, 1);
-        return -1;
+        return 0;
     }
-    
+    printk("class create sucsess");
     dev_create_res = device_create(cls, NULL, dev, NULL,  DEV_NAME);
     if(IS_ERR(dev_create_res))
     {
@@ -142,9 +144,9 @@ static int __init dev_init(void)
         kfree(char_dev_sample);
         unregister_chrdev_region(dev, 1);
         printk("Device create error \n");
-        return -1;
+        return 0;
     }
-
+    printk("device create sucsess");
     //atomic_set(&is_open, CDEV_NOT_USED);
     printk("dev_init : finish inittialization!!!!");
     return 0;
