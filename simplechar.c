@@ -12,11 +12,14 @@
 #define DEV_NAME "devchar_name"
 #define CLASS_NAME "devclass_name"
 #define BUF_LEN 100
+static char buffer_string[BUF_LEN];
+static int buffer_size = 0;
 
 dev_t dev;
 struct class* cls;
 struct cdev* char_dev_sample;
 struct device* dev_create_res;
+
 
 //static int maj_num;
 static int ctr = 0;
@@ -89,9 +92,26 @@ static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t
     return bytes_read;
 }
 
-static ssize_t dev_write(struct file*, const char __user *, size_t, loff_t*)
+static ssize_t dev_write(struct file*, const char __user *buffer, size_t lenght, loff_t*)
 {
+    ssize_t bytes_writ = 0;
     printk("Openration is not permitted!!!!");
+    if(lenght > BUF_LEN)
+    {
+        printk("dev_write func. Lenght bigger than buffer size !!!!!");
+        lenght = BUF_LEN;
+    }
+    
+    if(copy_from_user(buffer_string, buffer, lenght))
+    {
+        printk("dev_write. Failed to copy data ffrom userspace !!!!!");
+        return -EFAULT;
+    }
+
+    buffer_size = lenght;
+    bytes_writ = lenght;
+    buffer_string[lenght] = '\0';
+
     return 0;
 }
 
@@ -126,7 +146,7 @@ static int __init dev_init(void)
 
     printk("cdev add/init susess");
 
-    cls = class_create(CLASS_NAME);
+    cls = class_create(THIS_MODULE, CLASS_NAME);
     if(IS_ERR(cls))
     {
         printk("Class create error\n");
