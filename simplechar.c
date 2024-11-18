@@ -95,7 +95,7 @@ static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t
 static ssize_t dev_write(struct file*, const char __user *buffer, size_t lenght, loff_t*)
 {
     ssize_t bytes_writ = 0;
-    printk("Openration is not permitted!!!!");
+    printk("DEv write function!!!!");
     if(lenght > BUF_LEN)
     {
         printk("dev_write func. Lenght bigger than buffer size !!!!!");
@@ -112,7 +112,7 @@ static ssize_t dev_write(struct file*, const char __user *buffer, size_t lenght,
     bytes_writ = lenght;
     buffer_string[lenght] = '\0';
 
-    return 0;
+    return bytes_writ;
 }
 
 
