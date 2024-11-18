@@ -20,8 +20,6 @@ struct class* cls;
 struct cdev* char_dev_sample;
 struct device* dev_create_res;
 
-
-//static int maj_num;
 static int ctr = 0;
 
 static int dev_open(struct inode* ind, struct file* flp);
@@ -43,12 +41,10 @@ enum {
     CDEV_EXCLUSIVE_OPEN = 1
 };
 
-//static char message[BUF_LEN];
 static atomic_t is_open = ATOMIC_INIT(0);
 
 static int dev_open(struct inode* ind, struct file* flp)
 {
-    //static int counter = 0;
     printk("char device open !!!!!");
     if(atomic_cmpxchg(&is_open, CDEV_NOT_USED, CDEV_EXCLUSIVE_OPEN))
     {
@@ -167,7 +163,6 @@ static int __init dev_init(void)
         return 0;
     }
     printk("device create sucsess");
-    //atomic_set(&is_open, CDEV_NOT_USED);
     printk("dev_init : finish inittialization!!!!");
     return 0;
 }
