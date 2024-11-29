@@ -12,13 +12,14 @@
 #define DEV_NAME "devchar_name"
 #define CLASS_NAME "devclass_name"
 #define BUF_LEN 100
+static char buffer_string[BUF_LEN];
+static int buffer_size = 0;
 
 dev_t dev;
 struct class* cls;
 struct cdev* char_dev_sample;
 struct device* dev_create_res;
 
-//static int maj_num;
 static int ctr = 0;
 
 static int dev_open(struct inode* ind, struct file* flp);
@@ -40,13 +41,10 @@ enum {
     CDEV_EXCLUSIVE_OPEN = 1
 };
 
-static char message[BUF_LEN];
-//static atomic_t is_open = ATOMIC_OPEN(CDEV_NOT_USED);
-static atomic_t is_open;
+static atomic_t is_open = ATOMIC_INIT(0);
 
 static int dev_open(struct inode* ind, struct file* flp)
 {
-    //static int counter = 0;
     printk("char device open !!!!!");
     if(atomic_cmpxchg(&is_open, CDEV_NOT_USED, CDEV_EXCLUSIVE_OPEN))
     {
@@ -55,7 +53,7 @@ static int dev_open(struct inode* ind, struct file* flp)
     }
     ctr++;
     printk("I TOLD YOU %d times gtfo", ctr);
-    return 1;
+    return 0;
 }
 
 static int dev_rel(struct inode* ind, struct file* flp)
@@ -64,13 +62,14 @@ static int dev_rel(struct inode* ind, struct file* flp)
     atomic_set(&is_open, CDEV_NOT_USED);
     
 
-    return 1;
+    return 0;
 }
 
 static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t* offset)
 {
     int bytes_read = 0;
-    const char* msg_ptr = message;
+    const char* msg_ptr = "string to read!!!!!";
+    
     if(!*(msg_ptr + *offset)){
         *offset = 0;
         return 0;
@@ -85,14 +84,31 @@ static ssize_t dev_read(struct file*,char __user *buffer , size_t lenght, loff_t
     }
 
     *offset += bytes_read;
-
+    printk("NUmber of bytes read %d !!!!!", bytes_read);
     return bytes_read;
 }
 
-static ssize_t dev_write(struct file*, const char __user *, size_t, loff_t*)
+static ssize_t dev_write(struct file*, const char __user *buffer, size_t lenght, loff_t*)
 {
-    printk("Openration is not permitted!!!!");
-    return 1;
+    ssize_t bytes_writ = 0;
+    printk("DEv write function!!!!");
+    if(lenght > BUF_LEN)
+    {
+        printk("dev_write func. Lenght bigger than buffer size !!!!!");
+        lenght = BUF_LEN;
+    }
+    
+    if(copy_from_user(buffer_string, buffer, lenght))
+    {
+        printk("dev_write. Failed to copy data ffrom userspace !!!!!");
+        return -EFAULT;
+    }
+
+    buffer_size = lenght;
+    bytes_writ = lenght;
+    buffer_string[lenght] = '\0';
+
+    return bytes_writ;
 }
 
 
@@ -107,14 +123,14 @@ static int __init dev_init(void)
         printk("Major number less than 0\n");
         return err;
     }
-
+    printk("Alloc region sucsess");
     char_dev_sample = kmalloc(sizeof(struct cdev), GFP_KERNEL);
     if(!char_dev_sample){
         printk("Failed to allocate dynamic memory !!!!!");
         unregister_chrdev_region(dev, 1);
-        return -1;
+        return 0;
     }
-
+    printk("Kmalloc sucsess");
     cdev_init(char_dev_sample, &fops);
     err = cdev_add(char_dev_sample, dev, 1);
     if(err < 0){
@@ -124,16 +140,18 @@ static int __init dev_init(void)
         return err;
     }
 
-    cls = class_create(CLASS_NAME);
+    printk("cdev add/init susess");
+
+    cls = class_create(THIS_MODULE, CLASS_NAME);
     if(IS_ERR(cls))
     {
         printk("Class create error\n");
         cdev_del(char_dev_sample);
         kfree(char_dev_sample);
         unregister_chrdev_region(dev, 1);
-        return -1;
+        return 0;
     }
-    
+    printk("class create sucsess");
     dev_create_res = device_create(cls, NULL, dev, NULL,  DEV_NAME);
     if(IS_ERR(dev_create_res))
     {
@@ -142,10 +160,9 @@ static int __init dev_init(void)
         kfree(char_dev_sample);
         unregister_chrdev_region(dev, 1);
         printk("Device create error \n");
-        return -1;
+        return 0;
     }
-
-    atomic_set(&is_open, CDEV_NOT_USED);
+    printk("device create sucsess");
     printk("dev_init : finish inittialization!!!!");
     return 0;
 }
