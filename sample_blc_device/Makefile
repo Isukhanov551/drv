@@ -1,4 +1,5 @@
 obj-m += blc_main.o
+obj-m += request.o
 
 PWD := $(CURDIR)
 
