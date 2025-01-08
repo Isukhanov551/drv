@@ -1,5 +1,7 @@
-obj-m += blc_main.o
-obj-m += request.o
+obj-m += blc_dev.o
+
+blc_dev-m += blc_main.o
+blc_dev-m += request.o
 
 PWD := $(CURDIR)
 
